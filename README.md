@@ -29,3 +29,16 @@ npm run preview    # 網址 http://localhost:4173/chat/
 ## 資料庫
 
 不用 Supabase CLI。`supabase/migrations/` 裡的 SQL 檔,依檔名順序貼到 Supabase 後台的 SQL Editor 執行即可。可以重複執行。
+
+## 新增功能
+
+`docs/requirements.md` 沒有寫,但已經做好的功能:
+
+| 功能 | 等級 | 說明 | 檔案 |
+|---|---|---|---|
+| 資料庫端限速 | C | 同一個人 3 秒內最多 5 則,超過由資料庫直接拒絕(`rate_limited`),繞過網頁也擋得住。前端另有一份同樣的限速,只是為了馬上提示使用者。 | `supabase/migrations/20261013000000_chat.sql` 的 `send_message`;前端 `src/lib/rateLimit.ts` |
+| 伺服器端字元過濾與保留字 | C | 資料庫會自己清掉代號和訊息裡的不可見字元、控制字元、會讓排版方向反過來的字元,把長得像空白的字元換成一般空白;代號不分大小寫比對,並拒絕「系統」「system」這類保留字。 | `supabase/migrations/20261013000000_chat.sql` 的 `claim_nickname`、`send_message`;前端同樣的規則在 `src/lib/text.ts` |
+| 分頁標題未讀數 | A | 切到別的分頁時有新訊息,分頁標題會變成「(3) 匿名聊天室」;回到分頁後清掉。 | `src/hooks/useUnreadTitle.ts`、`src/hooks/useChat.ts` |
+| 收到的訊息先檢查再顯示 | | 即時推來的和載入的歷史訊息,都先檢查欄位型別與長度,不合格就丟掉。 | `src/services/SupabaseChatService.ts` 的 `toMessage` |
+
+細節見 `docs/architecture.md` 第 9 節。

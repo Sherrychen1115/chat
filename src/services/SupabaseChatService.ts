@@ -14,7 +14,7 @@ import {
   type RealtimePostgresChangesPayload,
   type SupabaseClient,
 } from '@supabase/supabase-js'
-import { nicknameKey, validateNickname } from '../lib/text'
+import { BODY_MAX, NICKNAME_MAX, charCount, nicknameKey, validateNickname } from '../lib/text'
 import {
   ChatError,
   type ChatErrorCode,
@@ -56,14 +56,34 @@ interface MessageRow {
 
 type Handlers = { [K in keyof ChatEvents]: Set<(payload: ChatEvents[K]) => void> }
 
-function toMessage(row: MessageRow): Message {
-  return {
-    id: Number(row.id),
-    nickname: row.nickname,
-    body: row.body,
-    createdAt: row.created_at,
-    senderId: row.user_id,
-  }
+/**
+ * 把資料庫的一列轉成畫面用的訊息。
+ * 收到的資料不一定可信(別人可以繞過網頁直接送),所以先檢查型別和長度,不合格回傳 null,由呼叫的地方丟掉。
+ */
+function toMessage(row: unknown): Message | null {
+  if (typeof row !== 'object' || row === null) return null
+  const { id, nickname, body, created_at, user_id } = row as Record<string, unknown>
+
+  // 編號可能是數字,也可能是數字字串(bigint),一律轉成數字再檢查
+  const numericId = typeof id === 'number' || typeof id === 'string' ? Number(id) : NaN
+  if (!Number.isSafeInteger(numericId) || numericId <= 0) return null
+
+  if (typeof nickname !== 'string' || typeof body !== 'string') return null
+  const nicknameLength = charCount(nickname)
+  if (nicknameLength < 1 || nicknameLength > NICKNAME_MAX) return null
+  const bodyLength = charCount(body)
+  if (bodyLength < 1 || bodyLength > BODY_MAX) return null
+
+  if (typeof created_at !== 'string' || Number.isNaN(Date.parse(created_at))) return null
+  if (typeof user_id !== 'string' || user_id === '') return null
+
+  return { id: numericId, nickname, body, createdAt: created_at, senderId: user_id }
+}
+
+/** 一次轉換多列,不合格的丟掉 */
+function toMessages(rows: unknown): Message[] {
+  if (!Array.isArray(rows)) return []
+  return rows.map(toMessage).filter((message): message is Message => message !== null)
 }
 
 /** 資料庫函式丟出的錯誤,訊息就是錯誤代碼;其他一律當成網路問題 */
@@ -168,7 +188,7 @@ export class SupabaseChatService implements ChatService {
       .order('id', { ascending: false })
       .limit(limit)
     if (error) throw new ChatError('network')
-    return (data as MessageRow[]).map(toMessage).reverse()
+    return toMessages(data).reverse()
   }
 
   async loadSince(afterId: number): Promise<Message[]> {
@@ -179,7 +199,7 @@ export class SupabaseChatService implements ChatService {
       .order('id', { ascending: true })
       .limit(200)
     if (error) throw new ChatError('network')
-    return (data as MessageRow[]).map(toMessage)
+    return toMessages(data)
   }
 
   // ---------- 登入 ----------
@@ -228,7 +248,8 @@ export class SupabaseChatService implements ChatService {
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'messages' },
       (payload: RealtimePostgresChangesPayload<MessageRow>) => {
-        this.emit('message', toMessage(payload.new as MessageRow))
+        const message = toMessage(payload.new)
+        if (message) this.emit('message', message)
       },
     )
     this.channel = channel
