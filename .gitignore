@@ -1,0 +1,11 @@
+# 金鑰與環境變數 (只有 .env.example 可以 commit)
+.env
+.env.*
+!.env.example
+
+# 建置與相依套件
+node_modules/
+dist/
+
+# 系統檔案
+.DS_Store
