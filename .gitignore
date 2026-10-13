@@ -9,3 +9,6 @@ dist/
 
 # 系統檔案
 .DS_Store
+
+# TypeScript 建置快取
+*.tsbuildinfo
