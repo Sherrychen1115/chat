@@ -26,10 +26,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-        # 階段二接 Supabase 時,在這裡把專案網址和 Publishable key 帶進建置:
-        # env:
-        #   VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-        #   VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        # 把專案網址和 Publishable key 帶進建置(設定在 repo 的 Settings > Secrets and variables > Actions > Variables)
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

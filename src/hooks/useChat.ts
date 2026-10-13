@@ -40,12 +40,22 @@ function toItem(message: Message): TimelineItem {
   return { kind: 'message', key: `m${message.id}`, message }
 }
 
-/** 把新收到的訊息併進時間軸,同一個編號的訊息只留一則 */
+/**
+ * 把新收到的訊息併進時間軸:同一個編號的訊息只留一則,而且依訊息編號排序。
+ * 即時推送不保證抵達的順序,但所有人看到的順序要一致,所以以編號為準。
+ */
 function mergeMessages(items: TimelineItem[], incoming: Message[]): TimelineItem[] {
   const have = new Set<number>()
   for (const item of items) if (item.kind === 'message') have.add(item.message.id)
-  const fresh = incoming.filter((m) => !have.has(m.id)).map(toItem)
-  return fresh.length === 0 ? items : [...items, ...fresh]
+  let result = items
+  for (const message of [...incoming].sort((a, b) => a.id - b.id)) {
+    if (have.has(message.id)) continue
+    have.add(message.id)
+    const item = toItem(message)
+    const at = result.findIndex((i) => i.kind === 'message' && i.message.id > message.id)
+    result = at === -1 ? [...result, item] : [...result.slice(0, at), item, ...result.slice(at)]
+  }
+  return result
 }
 
 export function useChat(service: ChatService) {

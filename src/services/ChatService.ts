@@ -1,5 +1,6 @@
 // 通訊約定。畫面只依賴這個檔案,不知道資料是從哪裡來的。
-// 階段一:MockChatService(假資料)。階段二:SupabaseChatService。兩者都要遵守這份約定。
+// 階段一用過 MockChatService(假資料,已移除,看 git 歷史),階段二是 SupabaseChatService。
+// 換通訊層時,新的通訊層都要遵守這份約定,畫面程式就不用改。
 
 /** 歷史訊息的筆數 */
 export const HISTORY_LIMIT = 50
@@ -57,14 +58,6 @@ export interface ChatEvents {
   connection: ConnectionStatus
 }
 
-/** 展示開關,只有 MockChatService 有。階段二不會有 */
-export interface DemoControls {
-  disconnect(): void
-  reconnect(): void
-  kick(): void
-  botSpeak(): void
-}
-
 export interface ChatService {
   /** 這個瀏覽器的匿名編號 */
   readonly selfId: string
@@ -83,6 +76,4 @@ export interface ChatService {
     event: K,
     handler: (payload: ChatEvents[K]) => void,
   ): () => void
-  /** 只有假通訊層有 */
-  readonly demo?: DemoControls
 }
