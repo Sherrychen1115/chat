@@ -43,16 +43,24 @@ function pick<T>(list: T[]): T {
   return list[Math.floor(Math.random() * list.length)]
 }
 
+// crypto.randomUUID 只有 https 或 localhost 才有;用手機透過區網 http 網址預覽時沒有它,
+// 直接呼叫會讓整個頁面一片空白,所以要有備案。
+function newId(): string {
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+  const bytes = crypto.getRandomValues(new Uint8Array(16))
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
+}
+
 function loadSelfId(): string {
   const key = 'chat.selfId'
   try {
     const saved = localStorage.getItem(key)
     if (saved) return saved
-    const created = crypto.randomUUID()
+    const created = newId()
     localStorage.setItem(key, created)
     return created
   } catch {
-    return crypto.randomUUID()
+    return newId()
   }
 }
 
