@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { nicknameErrorText } from '../lib/messages'
-import { NICKNAME_MAX, charCount, validateNickname } from '../lib/text'
+import { NICKNAME_MAX, charCount, cleanNickname, validateNickname } from '../lib/text'
 import type { ChatErrorCode } from '../services/ChatService'
 import { AlertIcon, ChatIcon, SpinnerIcon } from './icons'
 
@@ -18,6 +18,8 @@ interface Props {
 export function NicknameScreen({ initialValue = '', joining, error, kickedNotice, onSubmit, onEdit }: Props) {
   const [value, setValue] = useState(initialValue)
   const canSubmit = validateNickname(value).ok && !joining
+  // 不用輸入框的 maxLength:它按 UTF-16 算,一個表情符號算兩個,會比「12 個字」更早截斷
+  const tooLong = charCount(cleanNickname(value)) > NICKNAME_MAX
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault()
@@ -48,16 +50,15 @@ export function NicknameScreen({ initialValue = '', joining, error, kickedNotice
           </label>
           <input
             id="nickname"
-            className={error ? 'input input--error' : 'input'}
+            className={error || tooLong ? 'input input--error' : 'input'}
             type="text"
             value={value}
             placeholder="例如:小明"
-            maxLength={NICKNAME_MAX}
             autoComplete="off"
             autoCapitalize="off"
             autoFocus
             disabled={joining}
-            aria-invalid={error ? true : undefined}
+            aria-invalid={error || tooLong ? true : undefined}
             aria-describedby="nickname-help"
             onChange={(event) => {
               setValue(event.target.value)
@@ -69,11 +70,15 @@ export function NicknameScreen({ initialValue = '', joining, error, kickedNotice
               <span className="field__error" role="alert">
                 {nicknameErrorText(error)}
               </span>
+            ) : tooLong ? (
+              <span className="field__error" role="alert">
+                代號最多 {NICKNAME_MAX} 個字
+              </span>
             ) : (
               <span>1 到 12 個字,中英文數字都可以</span>
             )}
-            <span>
-              {charCount(value)}/{NICKNAME_MAX}
+            <span className={tooLong ? 'field__error' : undefined}>
+              {charCount(cleanNickname(value))}/{NICKNAME_MAX}
             </span>
           </div>
         </div>

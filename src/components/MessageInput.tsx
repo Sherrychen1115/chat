@@ -53,8 +53,9 @@ export function MessageInput({ offline, cooling, onSend }: Props) {
     areaRef.current?.focus()
     const result = await onSend(sending)
     if (!result.ok) {
-      // 失敗:文字要留在輸入框,不能消失(使用者在這段時間已經打了新字的話,不覆蓋)
-      setText((current) => (current === '' ? sending : current))
+      // 失敗:文字要留在輸入框,不能消失。使用者在等待期間已經打了新字的話,
+      // 把失敗的那則放在前面、新打的接在後面,兩邊都不會遺失
+      setText((current) => (current === '' ? sending : `${sending}\n${current}`))
       if (result.code !== 'rate_limited') setSendError(sendErrorText(result.code))
     }
   }
